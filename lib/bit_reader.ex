@@ -7,6 +7,119 @@ defmodule H264.Decoder.BitReader do
   @full_mask {0b11111111, 0b01111111, 0b00111111, 0b00011111, 0b00001111, 0b00000111, 0b00000011, 0b00000001}
   @position_mask {0b10000000, 0b01000000, 0b00100000, 0b00010000, 0b00001000, 0b00000100, 0b00000010, 0b00000001}
 
+  ## is_xxx?
+
+  def is_result_value_in?(key, list) do
+    fn (result) ->
+      v = result[key]
+      Enum.any?(list, &(&1 == v))
+    end
+  end
+
+  def is_result_value_greater_than?(key, expectedValue) do
+    &(&1[key] > expectedValue)
+  end
+
+  def is_result_value_equal?(key, expectedValue) do
+    &(&1[key] == expectedValue)
+  end
+
+  def has_more_rbsp_data?(data, bitOffset) do
+    Logger.debug("has more rbsp data? #{byte_size(data)}, offset:#{bitOffset}")
+    if byte_size(data) > 1 do
+      true
+    else
+      <<out::unsigned-integer-size(8), _rest::binary>> = data
+      bitOffset = bitOffset &&& 0x07
+      offset = 7 - bitOffset
+      # control bit for current bit posision
+      ctr_bit = (out >>> offset) &&& 0x01
+      if ctr_bit == 0 do
+        true
+      else
+        # last bit is 1
+        # ? is this a bug?
+        # if offset the last bit, then 0xaaaaaaa1 represent no more data?
+        # shouldn't we check next byte?
+        if offset == 0 do
+          false
+        end
+        value = out &&& elem(@full_mask, bitOffset+1)
+        value > 0
+      end
+    end
+  end
+
+  ## helper funcs
+  def align_byte({result, rest, bitOffset}) do
+    if bitOffset == 0 do
+      {result, rest, bitOffset}
+    else
+      <<_h, rest::binary>> = rest
+      {result, rest, bitOffset}
+    end
+  end
+
+
+  ## bit_read_xxx
+
+  @doc """
+    keys: should List [:name, ...]
+    read_funcs: should be List [read_xxx, ...]
+    keys and read_funcs should have the same size
+  """
+  def bit_repeat_multi_read({result, data, bitOffset}, keys, repeatCount, read_funcs) do
+    {valuesList, rest, offset} = bit_repeat_multi_read_list({data, bitOffset}, repeatCount, read_funcs)
+    listByKey = valuesList |> Enum.zip_with(&(&1))
+    result = Enum.zip_reduce(keys, listByKey, result, fn (x, y, acc) -> Map.put(acc, x, y) end)
+    {result, rest, offset}
+  end
+
+  defp bit_repeat_multi_read_list({data, bitOffset}, repeatCount, read_funcs) do
+    case repeatCount do
+      0 ->
+        {[], data, bitOffset}
+      _ ->
+        # value is a list
+        {value, rest, offset} = bit_multi_read({data, bitOffset}, read_funcs)
+        {nextValue, rest, offset} = bit_repeat_multi_read_list({rest, offset}, repeatCount-1, read_funcs)
+        {[value | nextValue], rest, offset}
+    end
+  end
+
+  defp bit_multi_read({data, bitOffset}, []) do
+    {[], data, bitOffset}
+  end
+
+  defp bit_multi_read({data, bitOffset}, read_funcs) do
+    [head | tail] = read_funcs
+    {value, rest, offset} = head.(data, bitOffset)
+    {list, rest, offset} = bit_multi_read({rest, offset}, tail)
+    {[value | list], rest, offset}
+  end
+
+  @doc """
+    read_func: should be read_xxx/3
+  """
+  def bit_repeat_read_3({result, data, bitOffset}, key, len, repeatCount, read_func) do
+    {value, rest, offset} = bit_repeat_read_list_3({data, bitOffset}, len, repeatCount, read_func)
+    {Map.put(result, key, value), rest, offset}
+  end
+
+  defp bit_repeat_read_list_3({data, bitOffset}, len, repeatCount, read_func) do
+    case repeatCount do
+      0 ->
+        {[], data, bitOffset}
+      _ ->
+        {value, rest, offset} = read_func.(data, bitOffset, len)
+        {nextValue, rest, offset} = bit_repeat_read_list_3({rest, offset}, len, repeatCount-1, read_func)
+        {[value | nextValue], rest, offset}
+    end
+  end
+
+  @doc """
+    read_func: should be read_xxx/2
+  """
   def bit_repeat_read({result, data, bitOffset}, key, repeatCount, read_func) do
     {value, rest, offset} = bit_repeat_read_list({data, bitOffset}, repeatCount, read_func)
     {Map.put(result, key, value), rest, offset}

@@ -1,8 +1,8 @@
-
 defmodule H264.Decoder.Sps do
   import Bitwise
   require Logger
   alias H264.Decoder.BitReader
+  alias H264.Decoder.Collection
 
   @profile_baseline 66
   @profile_main 77
@@ -22,6 +22,18 @@ defmodule H264.Decoder.Sps do
   @special_profiles [@profile_frext_hp, @profile_frext_hi_10_p,
                       @profile_frext_hi_422, @profile_frext_hi_444,
                       @profile_mvc_high, @profile_stereo_high]
+
+  @default_4x4_intra [6,13,13,20,20,20,28,28,28,28,32,32,32,27,27,42]
+  @default_4x4_inter [10,14,14,20,20,20,24,24,24,24,27,27,27,30,30,34]
+
+  @default_8x8_intra [6,10,10,13,11,13,16,16,16,16,18,18,18,18,18,23,
+                      23,23,23,23,23,25,25,25,25,25,25,25,27,27,27,27,
+                      27,27,27,27,29,29,29,29,29,29,29,31,31,31,31,31,
+                      31,33,33,33,33,33,36,36,36,36,38,38,38,40,40,42]
+  @default_8x8_inter [09,13,13,15,13,15,17,17,17,17,19,19,19,19,19,21,
+                      21,21,21,21,21,22,22,22,22,22,22,22,24,24,24,24,
+                      24,24,24,24,25,25,25,25,25,25,25,27,27,27,27,27,
+                      27,28,28,28,28,28,30,30,30,30,32,32,32,33,33,35]
 
   defmodule SpsData do
     defstruct [:profile_idc,
@@ -55,7 +67,7 @@ defmodule H264.Decoder.Sps do
               ]
   end
 
-  def parse(data, byte_offset, bitOffset) do
+  def parse(data, bitOffset) do
     rest = data
     ss = byte_size(data)
     if ss > 25 do
@@ -72,6 +84,8 @@ defmodule H264.Decoder.Sps do
       :frame_crop_right_offset => 0,
       :frame_crop_top_offset => 0,
       :frame_crop_bottom_offset => 0,
+      :scaling_list_4x4 => Collection.new_matrix(12, 16, 0),
+      :scaling_list_8x8 => Collection.new_matrix(12, 64, 0),
     }
 
     {result, restData, lastOffset} = {defaultResult, rest, bitOffset} |> BitReader.bit_read_u(:profile_idc, 8)
@@ -208,15 +222,59 @@ defmodule H264.Decoder.Sps do
       else
         12
       end
-      # if chroma_format_idc != @chroma_format_idc_444 do
-      #   list_len = 8
-      # end
-      {list_content, rest, bitOffset} = H264.Decoder.BitReader.read_u(rest, bitOffset, list_len)
-      seq_scaling_list_present_flag = number_to_bit_list(list_content, list_len)
+      # {list_content, rest, bitOffset} = H264.Decoder.BitReader.read_u(rest, bitOffset, list_len)
+      # seq_scaling_list_present_flag = number_to_bit_list(list_content, list_len)
+      scalingList4x4 = result[:scaling_list_4x4]
+      scalingList8x8 = result[:scaling_list_8x8]
+      {seq_scaling_list_present_flag, rest, bitOffset, scalingList4x4, scalingList8x8} = read_scaling_list_item(rest, bitOffset, 0, list_len, scalingList4x4, scalingList8x8)
       Map.put(result, :seq_scaling_list_present_flag, seq_scaling_list_present_flag)
+      Map.put(result, :scaling_list_4x4, scalingList4x4)
+      Map.put(result, :scaling_list_8x8, scalingList8x8)
       {result, rest, bitOffset}
     else
       {result, rest, bitOffset}
+    end
+  end
+
+  defp read_scaling_list_item(data, bitOffset, index, len, scalingList4x4, scalingList8x8) do
+    if index < len do
+      {b, rest, bitOffset} = H264.Decoder.BitReader.read_u(data, bitOffset, 1)
+      if b == 1 do
+        if index < 6 do
+          change_scaling_list(data, bitOffset, Enum.at(scalingList4x4, index), 16, 0)
+        else
+          change_scaling_list(data, bitOffset, Enum.at(scalingList8x8, index-6), 16, 0)
+        end
+      end
+      {list, rest, bitOffset, scalingList4x4, scalingList8x8} = read_scaling_list_item(rest, bitOffset, index+1, len, scalingList4x4, scalingList8x8)
+      {[b | list], rest, bitOffset, scalingList4x4, scalingList8x8}
+    else
+      {[], data, bitOffset, scalingList4x4, scalingList8x8}
+    end
+  end
+
+  defp change_scaling_list(data, bitOffset, scalingList, sizeOfScalingList, useDefaultScalingMatrixFlag) do
+    change_scaling_list_item(data, bitOffset, scalingList, 0, sizeOfScalingList, useDefaultScalingMatrixFlag, 8, 8)
+  end
+
+  defp change_scaling_list_item(data, bitOffset, scalingList, index, sizeOfScalingList, useDefaultScalingMatrixFlag, lastScale, nextScale) do
+    rest = data
+    offset = bitOffset
+    if index < sizeOfScalingList do
+      if nextScale != 0 do
+        {deltaScal, ^rest, ^offset} = BitReader.read_se_v(data, bitOffset)
+        ^nextScale = rem((lastScale + deltaScal + 256), 256)
+      end
+      item = if nextScale == 0 do
+        lastScale
+      else
+        nextScale
+      end
+      scalingList = List.update_at(scalingList, index, fn _r -> item end)
+      lastScale = item
+      change_scaling_list_item(data, bitOffset, scalingList, index+1, sizeOfScalingList, useDefaultScalingMatrixFlag, lastScale, nextScale)
+    else
+      {rest, offset, scalingList}
     end
   end
 

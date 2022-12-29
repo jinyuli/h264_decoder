@@ -64,11 +64,13 @@ defmodule H264.Decoder.Nal do
     case nal_unit_type do
       @nal_type_sps ->
         Logger.info("parse sps")
-        H264.Decoder.Sps.parse(rest, 0, 0)
-      # @nal_type_pps ->
-      #   Logger.info("parse pps")
-      # @nal_type_single ->
-      #   Logger.info("parse single")
+        H264.Decoder.Sps.parse(rest, 0)
+      @nal_type_pps ->
+        Logger.info("parse pps")
+        H264.Decoder.Pps.parse(rest, 0)
+      @nal_type_single ->
+        Logger.info("parse single")
+        H264.Decoder.Slice.parse_single(rest, 0)
       # @nal_type_partition_a ->
       #   Logger.info("parse partition a")
       # @nal_type_partition_b ->
