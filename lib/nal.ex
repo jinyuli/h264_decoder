@@ -60,6 +60,11 @@ defmodule H264.Decoder.Nal do
     # {nal_unit_type, rest} = BitReader.read_u(rest, 5)
 
     # IO.puts("#{forbidden_zero_bit}, #{nal_ref_idc}, #{nal_unit_type}, rest size: #{byte_size(rest)}")
+    result = %{
+      :nal_ref_idc => nal_ref_idc,
+      :nal_unit_type => nal_unit_type,
+      # :idr_pic_flag => nal_unit_type == @nal_type_idr,
+    }
 
     case nal_unit_type do
       @nal_type_sps ->

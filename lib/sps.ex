@@ -119,7 +119,7 @@ defmodule H264.Decoder.Sps do
                                             0 ->
                                               {result, rest, bitOffset} |> BitReader.bit_read_ue_v(:log2_max_pic_order_cnt_lsb_minus4)
                                             1 ->
-                                              {result, rest, bitOffset} |> BitReader.bit_read_u(:delta_pic_order_always_zero, 1)
+                                              {result, rest, bitOffset} |> BitReader.bit_read_u(:delta_pic_order_always_zero_flag, 1)
                                                 |> BitReader.bit_read_se_v(:offset_for_non_ref_pic)
                                                 |> BitReader.bit_read_se_v(:offset_for_top_to_bottom_pic)
                                                 |> BitReader.bit_read_ue_v(:num_ref_frames_in_pic_order_cnt_cycle)
@@ -197,8 +197,9 @@ defmodule H264.Decoder.Sps do
     else
       {(pic_width_in_mbs_minus1 + 1) * 16, (2 - frame_mbs_only_flag) * (pic_height_in_map_units_minus1 + 1) * 16}
     end
-    Map.put(result, :video_width, width)
-    Map.put(result, :video_height, height)
+    result = Map.put(result, :video_width, width)
+    result = Map.put(result, :video_height, height)
+    result = Map.put(result, :ChromaArrayType, chroma_array_type)
     Logger.info("video width and height (#{width}, #{height})")
   end
 
@@ -227,9 +228,9 @@ defmodule H264.Decoder.Sps do
       scalingList4x4 = result[:scaling_list_4x4]
       scalingList8x8 = result[:scaling_list_8x8]
       {seq_scaling_list_present_flag, rest, bitOffset, scalingList4x4, scalingList8x8} = read_scaling_list_item(rest, bitOffset, 0, list_len, scalingList4x4, scalingList8x8)
-      Map.put(result, :seq_scaling_list_present_flag, seq_scaling_list_present_flag)
-      Map.put(result, :scaling_list_4x4, scalingList4x4)
-      Map.put(result, :scaling_list_8x8, scalingList8x8)
+      result = Map.put(result, :seq_scaling_list_present_flag, seq_scaling_list_present_flag)
+      result = Map.put(result, :scaling_list_4x4, scalingList4x4)
+      result = Map.put(result, :scaling_list_8x8, scalingList8x8)
       {result, rest, bitOffset}
     else
       {result, rest, bitOffset}

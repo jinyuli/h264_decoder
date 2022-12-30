@@ -52,10 +52,10 @@ defmodule H264.Decoder.Pps do
                                             {result, rest, bitOffset} |> BitReader.bit_repeat_read_3(:slice_group_id, readSize, pic_size_in_map_units_minus1, &BitReader.read_u/3)
                                           end)
                                   end)
-                                  |> BitReader.bit_read_ue_v(:num_ref_idx_10_default_active_minus1)
-                                  |> BitReader.bit_read_ue_v(:num_ref_idx_11_default_active_minus1)
-                                  |> BitReader.bit_read_u(:waited_pre_flag, 1)
-                                  |> BitReader.bit_read_u(:waited_bipre_idc, 2)
+                                  |> BitReader.bit_read_ue_v(:num_ref_idx_l0_default_active_minus1)
+                                  |> BitReader.bit_read_ue_v(:num_ref_idx_l1_default_active_minus1)
+                                  |> BitReader.bit_read_u(:weighted_pred_flag, 1)
+                                  |> BitReader.bit_read_u(:weighted_bipred_idc, 2)
                                   |> BitReader.bit_read_se_v(:pic_init_qp_minus26)
                                   |> BitReader.bit_read_se_v(:pic_init_qs_minus26)
                                   |> BitReader.bit_read_se_v(:chroma_qp_index_offset)
@@ -91,9 +91,9 @@ defmodule H264.Decoder.Pps do
     scalingList4x4 = result[:scaling_list_4x4]
     scalingList8x8 = result[:scaling_list_8x8]
     {pic_scaling_list_present_flag, rest, bitOffset, scalingList4x4, scalingList8x8} = read_scaling_list_item(rest, bitOffset, 0, list_len, scalingList4x4, scalingList8x8)
-    Map.put(result, :pic_scaling_list_present_flag, pic_scaling_list_present_flag)
-    Map.put(result, :scaling_list_4x4, scalingList4x4)
-    Map.put(result, :scaling_list_8x8, scalingList8x8)
+    result = Map.put(result, :pic_scaling_list_present_flag, pic_scaling_list_present_flag)
+    result = Map.put(result, :scaling_list_4x4, scalingList4x4)
+    result = Map.put(result, :scaling_list_8x8, scalingList8x8)
     {result, rest, bitOffset}
   end
 

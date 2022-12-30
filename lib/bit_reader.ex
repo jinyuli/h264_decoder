@@ -24,6 +24,10 @@ defmodule H264.Decoder.BitReader do
     &(&1[key] == expectedValue)
   end
 
+  def is_result_value_not_equal?(key, expectedValue) do
+    &(&1[key] != expectedValue)
+  end
+
   def has_more_rbsp_data?(data, bitOffset) do
     Logger.debug("has more rbsp data? #{byte_size(data)}, offset:#{bitOffset}")
     if byte_size(data) > 1 do
@@ -98,6 +102,15 @@ defmodule H264.Decoder.BitReader do
     {[value | list], rest, offset}
   end
 
+  def bit_read_do_while({result, rest, bitOffset}, cond_func, read_func) do
+    {result, rest, bitOffset} = read_func.({result, rest, bitOffset})
+    if cond_func.(result) do
+      bit_read_do_while({result, rest, bitOffset}, cond_func, read_func)
+    else
+      {result, rest, bitOffset}
+    end
+  end
+
   @doc """
     read_func: should be read_xxx/3
   """
@@ -136,11 +149,22 @@ defmodule H264.Decoder.BitReader do
     end
   end
 
-  def bit_cond_read({result, data, bitOffset}, condFunc, read_func) do
-    if condFunc.(result) do
+  @doc """
+    read_func should be fn ({result, rest, bitOffset}) -> ::{result, rest, bitOffset}
+  """
+  def bit_cond_read({result, data, bitOffset}, cond_func, read_func) do
+    if cond_func.(result) do
       read_func.({result, data, bitOffset})
     else
       {result, data, bitOffset}
+    end
+  end
+
+  def bit_cond_read({result, data, bitOffset}, cond_func, read_func, else_read_func) do
+    if cond_func.(result) do
+      read_func.({result, data, bitOffset})
+    else
+    else_read_func.({result, data, bitOffset})
     end
   end
 
