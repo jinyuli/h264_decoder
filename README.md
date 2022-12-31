@@ -1,6 +1,15 @@
-# VodServer
+# H264 Decoder
 
-**TODO: Add description**
+## Introduction
+
+This is a H264 decoder. The project is in initial stage.
+
+Now it's able to read the following NAL unit from H264 file:
+  * 1: Code slice of a non-IDR picture
+  * 7: Seq parameter set
+  * 8: Pic parameter set
+
+Now I'm looking for a way to validate the parsed data.
 
 ## Installation
 
