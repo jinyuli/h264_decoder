@@ -31,51 +31,58 @@ defmodule H264.Decoder.Nal do
   end
 
   def parse(binaries) do
-    read_nals(binaries)
+    default_context = %{
+      :pps => %{},
+      :sps => %{},
+    }
+    read_nals(binaries, default_context)
   end
 
-  defp read_nals(binaries) when byte_size(binaries) > 0 do
+  defp read_nals(binaries, context) when byte_size(binaries) > 0 do
     start = find_start(binaries)
     {raw_nal, rest} = read_content(start)
     nal_data = filter_nal(raw_nal)
     # Logger.debug("nal , filtered? #{byte_size(nal_data) == byte_size(raw_nal)}, raw size #{byte_size(raw_nal)}, size #{byte_size(nal_data)}, rest size #{byte_size(rest)}")
-    parse_nal(nal_data)
-    # if nal.nal_unit_type != @nal_type_single do
-    #   IO.puts("#{nal.forbidden_zero_bit}, #{nal.nal_ref_idc}, #{nal.nal_unit_type}")
-    # end
-    read_nals(rest)
+    context = parse_nal(nal_data, context)
+
+    read_nals(rest, context)
   end
 
-  defp read_nals(_) do
+  defp read_nals(_, _) do
     IO.puts("no more data")
   end
 
-  defp parse_nal(nal_binary) do
+  defp parse_nal(nal_binary, context) do
     <<b, rest::binary>> = nal_binary
     forbidden_zero_bit = (b >>> 7) &&& 0x01
     nal_ref_idc = (b >>> 5) &&& 0x03
     nal_unit_type = b &&& 0x1F
-    # {forbidden_zero_bit, rest} = BitReader.read_f(rest, 1)
-    # {nal_ref_idc, rest} = BitReader.read_u(rest, 2)
-    # {nal_unit_type, rest} = BitReader.read_u(rest, 5)
+    # TODO there should be more data in header for same unit ytpe
 
     # IO.puts("#{forbidden_zero_bit}, #{nal_ref_idc}, #{nal_unit_type}, rest size: #{byte_size(rest)}")
-    result = %{
+    nal = %{
       :nal_ref_idc => nal_ref_idc,
       :nal_unit_type => nal_unit_type,
-      # :idr_pic_flag => nal_unit_type == @nal_type_idr,
+      :forbidden_zero_bit => forbidden_zero_bit,
     }
 
-    case nal_unit_type do
+    context = context |> Map.put(:nal, nal)
+
+    context = case nal_unit_type do
       @nal_type_sps ->
         Logger.info("parse sps")
-        H264.Decoder.Sps.parse(rest, 0)
+        sps = H264.Decoder.Sps.parse(rest, 0)
+        context = context |> Map.update!(:sps, fn v -> Map.put(v, sps[:seq_parameter_set_id], sps) end)
+        context
       @nal_type_pps ->
         Logger.info("parse pps")
-        H264.Decoder.Pps.parse(rest, 0)
+        pps = H264.Decoder.Pps.parse(rest, 0)
+        context = context |> Map.update!(:pps, fn v -> Map.put(v, pps[:pic_parameter_set_id], pps) end)
+        context
       @nal_type_single ->
         Logger.info("parse single")
-        H264.Decoder.Slice.parse_single(rest, 0)
+        H264.Decoder.Slice.parse_single(rest, 0, context)
+        context
       # @nal_type_partition_a ->
       #   Logger.info("parse partition a")
       # @nal_type_partition_b ->
@@ -83,15 +90,12 @@ defmodule H264.Decoder.Nal do
       # @nal_type_partition_c ->
       #   Logger.info("parse partition c")
       _ ->
-        1
+        context
         #Logger.warn("ignored NAL unit type #{nal_unit_type}")
         #ignore
     end
 
-    %NalData{forbidden_zero_bit: forbidden_zero_bit,
-      nal_ref_idc: nal_ref_idc,
-      nal_unit_type: nal_unit_type
-    }
+    context
   end
 
   defp read_content(binaries) do

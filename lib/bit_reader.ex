@@ -1,6 +1,10 @@
 
 defmodule H264.Decoder.BitReader do
 
+  @moduledoc """
+    helper functions to read bits from binary
+  """
+
   import Bitwise
   require Logger
 
@@ -55,12 +59,13 @@ defmodule H264.Decoder.BitReader do
   end
 
   ## helper funcs
+
   def align_byte({result, rest, bitOffset}) do
     if bitOffset == 0 do
       {result, rest, bitOffset}
     else
       <<_h, rest::binary>> = rest
-      {result, rest, bitOffset}
+      {result, rest, 0}
     end
   end
 
@@ -194,6 +199,8 @@ defmodule H264.Decoder.BitReader do
     {Map.put(result, key, value), rest, bitOffset}
   end
 
+  ## read func
+
   @doc """
     基于上下文自适应的二进制算术熵编码
   """
@@ -227,6 +234,7 @@ defmodule H264.Decoder.BitReader do
 
   @doc """
     读进连续的n个比特
+    TODO this is wrong, need to fix
   """
   def read_f(data, n) do
     <<out::size(n), rest::binary>> = data
@@ -252,11 +260,11 @@ defmodule H264.Decoder.BitReader do
     有符号指数golomb熵编码
   """
   def read_se_v(data, bitOffset) do
-    Logger.info("read_se_v, offset: #{bitOffset}")
+    # Logger.info("read_se_v, offset: #{bitOffset}")
     {len, rest, bitOffset} = read_golomb_len(data, bitOffset)
 
     value = get_signed_golomb_value(rest, bitOffset, len)
-    Logger.info("read_se_v, value: #{value}")
+    # Logger.info("read_se_v, value: #{value}")
 
     byteLen = (bitOffset + len) >>> 0x03
     rest = if byteLen > 0 do
@@ -265,7 +273,7 @@ defmodule H264.Decoder.BitReader do
     else
       rest
     end
-    Logger.info("read_se_v, offset: #{bitOffset}, #{bitOffset + len}")
+    # Logger.info("read_se_v, offset: #{bitOffset}, #{bitOffset + len}")
     bitOffset = (bitOffset + len) &&& 0x07
 
     {value, rest, bitOffset}
@@ -309,16 +317,6 @@ defmodule H264.Decoder.BitReader do
     无符号指数golomb熵编码
   """
   def read_ue_v(data, bitOffset) do
-    # Logger.info("read_ue_v, offset: #{bitOffset}")
-    # len = get_golomb_len(data, bitOffset) + 1
-    # Logger.info("read_ue_v, len: #{len}")
-    # byteLen = (bitOffset + len - 1) >>> 0x03
-    # rest = data
-    # bitOffset = (bitOffset + len - 1) &&& 0x07
-    # if byteLen > 0 do
-    #   <<_h::binary-size(byteLen), rest2::binary>> = rest
-    #   ^rest = rest2
-    # end
     {len, rest, bitOffset} = read_golomb_len(data, bitOffset)
     read_golomb_value(rest, bitOffset, len)
   end
@@ -335,10 +333,6 @@ defmodule H264.Decoder.BitReader do
     else
       rest
     end
-    # if byteLen > 0 do
-    #   <<_h::binary-size(byteLen), rest1::binary>> = rest
-    #   ^rest = rest1
-    # end
     # Logger.info("read_golomb_value, offset: #{bitOffset}, #{bitOffset + len}")
     bitOffset = (bitOffset + len) &&& 0x07
 

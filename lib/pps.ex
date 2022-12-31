@@ -76,6 +76,8 @@ defmodule H264.Decoder.Pps do
     IO.inspect(result)
     Logger.info("rest data: #{byte_size(rest)}, offset: #{bitOffset}")
     IO.inspect(rest, base: :binary)
+
+    result
   end
 
   defp read_scaling({result, rest, bitOffset}) do

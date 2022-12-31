@@ -1,4 +1,10 @@
+
 defmodule H264.Decoder.Sps do
+
+  @moduledoc """
+    parse SPS
+  """
+
   import Bitwise
   require Logger
   alias H264.Decoder.BitReader
@@ -199,8 +205,10 @@ defmodule H264.Decoder.Sps do
     end
     result = Map.put(result, :video_width, width)
     result = Map.put(result, :video_height, height)
-    result = Map.put(result, :ChromaArrayType, chroma_array_type)
+    result = Map.put(result, :chromaArrayType, chroma_array_type)
     Logger.info("video width and height (#{width}, #{height})")
+
+    result
   end
 
   defp read_vui_paramets({result, rest, bitOffset}) do
