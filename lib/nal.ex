@@ -43,9 +43,12 @@ defmodule H264.Decoder.Nal do
     {raw_nal, rest} = read_content(start)
     nal_data = filter_nal(raw_nal)
     # Logger.debug("nal , filtered? #{byte_size(nal_data) == byte_size(raw_nal)}, raw size #{byte_size(raw_nal)}, size #{byte_size(nal_data)}, rest size #{byte_size(rest)}")
-    context = parse_nal(nal_data, context)
+    {context, stop} = parse_nal(nal_data, context)
+    # IO.inspect(context)
 
-    read_nals(rest, context)
+    if !stop do
+      read_nals(rest, context)
+    end
   end
 
   defp read_nals(_, _) do
@@ -68,21 +71,21 @@ defmodule H264.Decoder.Nal do
 
     context = context |> Map.put(:nal, nal)
 
-    context = case nal_unit_type do
+    {context, stop} = case nal_unit_type do
       @nal_type_sps ->
         Logger.info("parse sps")
         sps = H264.Decoder.Sps.parse(rest, 0)
         context = context |> Map.update!(:sps, fn v -> Map.put(v, sps[:seq_parameter_set_id], sps) end)
-        context
+        {context, false}
       @nal_type_pps ->
         Logger.info("parse pps")
         pps = H264.Decoder.Pps.parse(rest, 0)
         context = context |> Map.update!(:pps, fn v -> Map.put(v, pps[:pic_parameter_set_id], pps) end)
-        context
+        {context, false}
       @nal_type_single ->
         Logger.info("parse single")
         H264.Decoder.Slice.parse_single(rest, 0, context)
-        context
+        {context, true}
       # @nal_type_partition_a ->
       #   Logger.info("parse partition a")
       # @nal_type_partition_b ->
@@ -90,12 +93,12 @@ defmodule H264.Decoder.Nal do
       # @nal_type_partition_c ->
       #   Logger.info("parse partition c")
       _ ->
-        context
+        {context, false}
         #Logger.warn("ignored NAL unit type #{nal_unit_type}")
         #ignore
     end
 
-    context
+    {context, stop}
   end
 
   defp read_content(binaries) do

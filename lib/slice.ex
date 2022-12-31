@@ -20,6 +20,7 @@ defmodule H264.Decoder.Slice do
   @slice_type_all_si 9
 
   def parse_single(data, bitOffset, context) do
+    Logger.info("parse single slice with data size #{byte_size(data)} and offset #{bitOffset}")
     rest = data
     data_size = byte_size(data)
     ss = if data_size > 25, do: 25, else: data_size
@@ -116,8 +117,7 @@ defmodule H264.Decoder.Slice do
         Logger.warn("reading unimplemented block, slice head, ref_pic_list_mvc_modification()")
         args
       end, fn args ->
-        slice_type = result[:slice_type]
-        args |> read_ref_pic_list_modification(slice_type)
+        args |> read_ref_pic_list_modification()
       end)
       |> BitReader.bit_cond_read(fn result ->
         slice_type = result[:slice_type]
@@ -189,8 +189,9 @@ defmodule H264.Decoder.Slice do
     %{:sps => spsMap, :pps => ppsMap} = context
     pic_parameter_set_id = result[:pic_parameter_set_id]
     ppsResult = ppsMap[pic_parameter_set_id]
-    seq_parameter_set_id = result[:seq_parameter_set_id]
+    seq_parameter_set_id = ppsResult[:seq_parameter_set_id]
     spsResult = spsMap[seq_parameter_set_id]
+    Logger.info("set_global_parameter pps:#{pic_parameter_set_id}, sps:#{seq_parameter_set_id}")
     result = result |> Map.put(:cur_pps, ppsResult) |> Map.put(:cur_sps, spsResult)
 
     separate_colour_plane_flag = spsResult[:separate_colour_plane_flag]
@@ -242,7 +243,8 @@ defmodule H264.Decoder.Slice do
     result
   end
 
-  defp read_ref_pic_list_modification({result, rest, bitOffset}, slice_type) do
+  defp read_ref_pic_list_modification({result, rest, bitOffset}) do
+    slice_type = result[:slice_type]
     rem_slice_type = rem(slice_type, 5)
     {result, rest, bitOffset} = BitReader.bit_cond_read({result, rest, bitOffset},
       fn _r -> (rem_slice_type != 2) and (rem_slice_type != 4) end,

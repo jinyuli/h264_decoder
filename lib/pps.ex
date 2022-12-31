@@ -23,6 +23,8 @@ defmodule H264.Decoder.Pps do
     defaultResult = %{
       :scaling_list_4x4 => Collection.new_matrix(12, 16, 0),
       :scaling_list_8x8 => Collection.new_matrix(12, 64, 0),
+      :pic_size_in_map_units_minus1 => 0,
+      :slice_group_change_rate_minus1 => 0,
     }
 
     {result, rest, bitOffset} = {defaultResult, rest, bitOffset} |> BitReader.bit_read_ue_v(:pic_parameter_set_id)

@@ -92,6 +92,7 @@ defmodule H264.Decoder.Sps do
       :frame_crop_bottom_offset => 0,
       :scaling_list_4x4 => Collection.new_matrix(12, 16, 0),
       :scaling_list_8x8 => Collection.new_matrix(12, 64, 0),
+      :log2_max_frame_num_minus4 => 0,
     }
 
     {result, restData, lastOffset} = {defaultResult, rest, bitOffset} |> BitReader.bit_read_u(:profile_idc, 8)
