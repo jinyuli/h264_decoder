@@ -203,6 +203,7 @@ defmodule H264.Decoder.BitReader do
 
   @doc """
     基于上下文自适应的二进制算术熵编码
+    TODO NOT IMPLEMENTED YET
   """
   def read_ae(data, v) do
     <<out::size(v), rest::binary>> = data
@@ -211,6 +212,7 @@ defmodule H264.Decoder.BitReader do
 
   @doc """
     读进连续的8个比特
+    TODO NOT IMPLEMENTED YET
   """
   def read_b8(data) do
     read_b(data, 8)
@@ -218,6 +220,7 @@ defmodule H264.Decoder.BitReader do
 
   @doc """
     读进连续的n个比特
+    TODO NOT IMPLEMENTED YET
   """
   def read_b(data, v) do
     <<out::size(v), rest::binary>> = data
@@ -226,6 +229,7 @@ defmodule H264.Decoder.BitReader do
 
   @doc """
     基于上下文自适应的可变长熵编码
+    TODO NOT IMPLEMENTED YET
   """
   def read_ce(data, v) do
     <<out::size(v), rest::binary>> = data
@@ -235,6 +239,7 @@ defmodule H264.Decoder.BitReader do
   @doc """
     读进连续的n个比特
     TODO this is wrong, need to fix
+    TODO NOT IMPLEMENTED YET
   """
   def read_f(data, n) do
     <<out::size(n), rest::binary>> = data
@@ -243,6 +248,7 @@ defmodule H264.Decoder.BitReader do
 
   @doc """
     读进连续的v个比特，并解释为有符号整数
+    TODO NOT IMPLEMENTED YET
   """
   def read_i(data, v) do
     <<out::integer-size(v), rest::binary>> = data
