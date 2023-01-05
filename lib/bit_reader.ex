@@ -212,19 +212,16 @@ defmodule H264.Decoder.BitReader do
 
   @doc """
     读进连续的8个比特
-    TODO NOT IMPLEMENTED YET
   """
-  def read_b8(data) do
-    read_b(data, 8)
+  def read_b8(data, bitOffset) do
+    read_b(data, bitOffset, 8)
   end
 
   @doc """
     读进连续的n个比特
-    TODO NOT IMPLEMENTED YET
   """
-  def read_b(data, v) do
-    <<out::size(v), rest::binary>> = data
-    {out, rest}
+  def read_b(data, bitOffset, v) do
+    read_u(data, bitOffset, v)
   end
 
   @doc """
@@ -238,12 +235,23 @@ defmodule H264.Decoder.BitReader do
 
   @doc """
     读进连续的n个比特
-    TODO this is wrong, need to fix
-    TODO NOT IMPLEMENTED YET
   """
-  def read_f(data, n) do
-    <<out::size(n), rest::binary>> = data
-    {out, rest}
+  def read_f(data, bitOffset, n) do
+    <<_n::unsigned-integer-size(8), rest::binary>> = data
+    bitOffset = bitOffset &&& 0x07
+
+    cur_byte_len = 8 - bitOffset
+    if cur_byte_len >= n do
+      bitOffset = (bitOffset + n) &&& 0x07
+      if (cur_byte_len == n) do
+        {0, rest, bitOffset}
+      else
+        {0, data, bitOffset}
+      end
+    else
+      {_, rest, newBitOffset} = read_f(rest, 0, n - (8 - bitOffset))
+      {0, rest, newBitOffset}
+    end
   end
 
   @doc """
@@ -292,6 +300,10 @@ defmodule H264.Decoder.BitReader do
     read_ue_v(data, bitOffset)
   end
 
+  defp format_integer_binary(v) do
+    Integer.digits(v, 2) |> Enum.map(&Integer.to_string/1) |> Enum.join("")
+  end
+
   @doc """
     读进连续的v个比特，并解释为无符号整数
   """
@@ -313,7 +325,7 @@ defmodule H264.Decoder.BitReader do
       end
     else
       value = (out &&& mask)
-      {nextValue, rest, newBitOffset} = read_u(data, 0, v - (8 - bitOffset))
+      {nextValue, rest, newBitOffset} = read_u(rest, 0, v - (8 - bitOffset))
       value = (value <<< (v - cur_byte_len)) ||| nextValue
       {value, rest, newBitOffset}
     end

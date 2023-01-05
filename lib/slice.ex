@@ -168,7 +168,7 @@ defmodule H264.Decoder.Slice do
         args |> BitReader.bit_read_u(:slice_group_change_cycle, Float.ceil(Math.log2(result[:picSizeInMapUnits] / result[:sliceGroupChangeRate] + 1)))
       end)
 
-    IO.inspect(result)
+    # IO.inspect(result)
     Logger.info("slice header rest data: #{byte_size(rest)}, offset: #{bitOffset}")
     # IO.inspect(rest, base: :binary)
     {result, rest, bitOffset}
@@ -177,8 +177,8 @@ defmodule H264.Decoder.Slice do
   defp parse_data({result, rest, bitOffset}) do
      {result, rest, bitOffset} = {result, rest, bitOffset} |> BitReader.bit_cond_read(fn r -> r[:entropy_coding_mode_flag] == 1 end, &BitReader.align_byte/1)
 
-    IO.inspect(result)
-    Logger.info("slice data rest data: #{byte_size(rest)}, offset: #{bitOffset}")
+    # IO.inspect(result)
+    # Logger.info("slice data rest data: #{byte_size(rest)}, offset: #{bitOffset}")
     # IO.inspect(rest, base: :binary)
     {result, rest, bitOffset}
   end

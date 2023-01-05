@@ -5,7 +5,7 @@ defmodule H264.Decoder do
   alias H264.Decoder.Nal
 
   def read do
-    read_head("D:\\Projects\\elixir_projects\\videos\\test_10s.h264")
+    read_head("D:\\Projects\\elixir_projects\\videos\\test_1s.h264")
   end
 
   def read_head(file_name) do

@@ -82,7 +82,6 @@ defmodule H264.Decoder.Sps do
     <<h::binary-size(ss), _rest::binary>> = data
     IO.inspect(h, base: :binary)
     IO.inspect(h)
-    # IO.puts(h)
     defaultResult = %{
       :chroma_format_idc => 1,
       :separate_colour_plane_flag => 0,
@@ -213,11 +212,44 @@ defmodule H264.Decoder.Sps do
   end
 
   defp read_vui_paramets({result, rest, bitOffset}) do
+    Logger.info("read vui parameters, #{byte_size(rest)}, #{bitOffset}")
+    IO.inspect(rest, base: :binary)
     if is_result_value_equal?(result, :vui_parameters_present_flag, 1) do
       {result, rest, bitOffset} |> BitReader.bit_read_u(:aspect_ratio_info_present_flag, 1)
                                 |> BitReader.bit_cond_read(is_result_value_equal?(:aspect_ratio_info_present_flag, 1), fn args ->
                                   args |> BitReader.bit_read_u(:aspect_ratio_idc, 8)
+                                        |> BitReader.bit_cond_read(BitReader.is_result_value_equal?(:aspect_ratio_idc, 255), fn args ->
+                                          args |> BitReader.bit_read_u(:sar_width, 16)
+                                                |> BitReader.bit_read_u(:sar_height, 16)
+                                        end)
                                 end)
+                                |> BitReader.bit_read_u(:overscan_info_present_flag, 1)
+                                |> BitReader.bit_cond_read(is_result_value_equal?(:overscan_info_present_flag, 1), fn args ->
+                                  args |> BitReader.bit_read_u(:overscan_appropriate_flag, 1)
+                                end)
+                                |> BitReader.bit_read_u(:video_signal_type_present_flag, 1)
+                                |> BitReader.bit_cond_read(is_result_value_equal?(:video_signal_type_present_flag, 1), fn args ->
+                                  args |> BitReader.bit_read_u(:video_format, 3)
+                                        |> BitReader.bit_read_u(:video_full_range_flag, 1)
+                                        |> BitReader.bit_read_u(:colour_description_flag, 1)
+                                        |> BitReader.bit_cond_read(is_result_value_equal?(:colour_description_flag, 1), fn args ->
+                                          args |> BitReader.bit_read_u(:colour_primaries, 8)
+                                                |> BitReader.bit_read_u(:transfer_characteristics, 8)
+                                                |> BitReader.bit_read_u(:matrix_coeeficients, 8)
+                                        end)
+                                end)
+                                |> BitReader.bit_read_u(:chroma_loc_info_present_flag, 1)
+                                |> BitReader.bit_cond_read(is_result_value_equal?(:chroma_loc_info_present_flag, 1), fn args ->
+                                  args |> BitReader.bit_read_ue_v(:chroma_sample_loc_type_top_field)
+                                        |> BitReader.bit_read_ue_v(:chroma_sample_loc_type_bottom_field)
+                                end)
+                                |> BitReader.bit_read_u(:timing_info_present_flag, 1)
+                                |> BitReader.bit_cond_read(is_result_value_equal?(:timing_info_present_flag, 1), fn args ->
+                                  args |> BitReader.bit_read_u(:num_units_in_tick, 32)
+                                        |> BitReader.bit_read_u(:time_scale, 32)
+                                        |> BitReader.bit_read_u(:fixed_frame_rate_flag, 1)
+                                end)
+
     else
       {result, rest, bitOffset}
     end
