@@ -12,13 +12,13 @@ defmodule H264.Decoder.Pps do
 
   def parse(data, bitOffset) do
     rest = data
-    ss = byte_size(data)
-    if ss > 25 do
-      ^ss = 25
-    end
-    <<h::binary-size(ss), _rest::binary>> = data
-    IO.inspect(h, base: :binary)
-    IO.inspect(h)
+    # ss = byte_size(data)
+    # if ss > 25 do
+    #   ^ss = 25
+    # end
+    # <<h::binary-size(ss), _rest::binary>> = data
+    # IO.inspect(h, base: :binary)
+    # IO.inspect(h)
 
     defaultResult = %{
       :scaling_list_4x4 => Collection.new_matrix(12, 16, 0),
@@ -75,9 +75,9 @@ defmodule H264.Decoder.Pps do
                                     end
                                   end)
 
-    IO.inspect(result)
-    Logger.info("rest data: #{byte_size(rest)}, offset: #{bitOffset}")
-    IO.inspect(rest, base: :binary)
+    # IO.inspect(result)
+    Logger.info("pps rest data: #{byte_size(rest)}, offset: #{bitOffset}")
+    # IO.inspect(rest, base: :binary)
 
     result
   end

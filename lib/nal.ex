@@ -48,11 +48,28 @@ defmodule H264.Decoder.Nal do
 
     if !stop do
       read_nals(rest, context)
+    else
+      context = context |> Map.update(:sps, %{}, fn m -> m |> Enum.map(fn {k, v} -> {Integer.to_string(k), v} end) |> Enum.reduce(%{}, fn {k, v}, m -> Map.put(m, k, v) end) end)
+      context = context |> Map.update(:pps, %{}, fn m -> m |> Enum.map(fn {k, v} -> {Integer.to_string(k), v} end) |> Enum.reduce(%{}, fn {k, v}, m -> Map.put(m, k, v) end) end)
+      {js, jr} = JSON.encode(context)
+      if js == :ok do
+        File.write('D:\\Projects\\elixir_projects\\videos\\slice.json', jr)
+      else
+        Logger.error('failed to encode to json')
+      end
     end
   end
 
-  defp read_nals(_, _) do
-    IO.puts("no more data")
+  defp read_nals(_, context) do
+    IO.puts("no more data, save json")
+    context = context |> Map.update(:sps, %{}, fn m -> m |> Enum.map(fn {k, v} -> {Integer.to_string(k), v} end) |> Enum.reduce(%{}, fn {k, v}, m -> Map.put(m, k, v) end) end)
+    context = context |> Map.update(:pps, %{}, fn m -> m |> Enum.map(fn {k, v} -> {Integer.to_string(k), v} end) |> Enum.reduce(%{}, fn {k, v}, m -> Map.put(m, k, v) end) end)
+    {js, jr} = JSON.encode(context)
+    if js == :ok do
+      File.write('D:\\Projects\\elixir_projects\\videos\\slice.json', jr)
+    else
+      Logger.error('failed to encode to json')
+    end
   end
 
   defp parse_nal(nal_binary, context) do
@@ -84,14 +101,29 @@ defmodule H264.Decoder.Nal do
         {context, false}
       @nal_type_single ->
         Logger.info("parse single")
-        H264.Decoder.Slice.parse_single(rest, 0, context)
-        {context, true}
-      # @nal_type_partition_a ->
-      #   Logger.info("parse partition a")
-      # @nal_type_partition_b ->
-      #   Logger.info("parse partition b")
-      # @nal_type_partition_c ->
-      #   Logger.info("parse partition c")
+        {slice, _, _} = H264.Decoder.Slice.parse_single(rest, 0, context)
+        context = context |> Map.update(:slices, [slice], fn v -> v ++ [slice] end)
+        {context, false}
+      @nal_type_partition_a ->
+        Logger.info("parse partition a")
+        {slice, _, _} = H264.Decoder.Slice.parse_single(rest, 0, context)
+        context = context |> Map.update(:slices, [slice], fn v -> v ++ [slice] end)
+        {context, false}
+      @nal_type_partition_b ->
+        Logger.info("parse partition b")
+        {slice, _, _} = H264.Decoder.Slice.parse_single(rest, 0, context)
+        context = context |> Map.update(:slices, [slice], fn v -> v ++ [slice] end)
+        {context, false}
+      @nal_type_partition_c ->
+        Logger.info("parse partition c")
+        {slice, _, _} = H264.Decoder.Slice.parse_single(rest, 0, context)
+        context = context |> Map.update(:slices, [slice], fn v -> v ++ [slice] end)
+        {context, false}
+      @nal_type_idr ->
+        Logger.info("parse idr")
+        {slice, _, _} = H264.Decoder.Slice.parse_single(rest, 0, context)
+        context = context |> Map.update(:slices, [slice], fn v -> v ++ [slice] end)
+        {context, false}
       _ ->
         {context, false}
         #Logger.warn("ignored NAL unit type #{nal_unit_type}")

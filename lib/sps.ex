@@ -160,9 +160,9 @@ defmodule H264.Decoder.Sps do
                                       end)
                                       |> BitReader.bit_read_u(:vui_parameters_present_flag, 1)
                                       |> read_vui_paramets()
-    IO.inspect(result)
-    Logger.info("rest data: #{byte_size(restData)}, offset: #{lastOffset}")
-    IO.inspect(rest, base: :binary)
+    # IO.inspect(result)
+    Logger.info("sps rest data: #{byte_size(restData)}, offset: #{lastOffset}")
+    # IO.inspect(rest, base: :binary)
 
     pic_width_in_mbs_minus1 = result[:pic_width_in_mbs_minus1]
     pic_height_in_map_units_minus1 = result[:pic_height_in_map_units_minus1]

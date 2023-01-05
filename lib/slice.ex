@@ -22,11 +22,11 @@ defmodule H264.Decoder.Slice do
   def parse_single(data, bitOffset, context) do
     Logger.info("parse single slice with data size #{byte_size(data)} and offset #{bitOffset}")
     rest = data
-    data_size = byte_size(data)
-    ss = if data_size > 25, do: 25, else: data_size
-    <<h::binary-size(ss), _rest::binary>> = data
-    IO.inspect(h, base: :binary)
-    IO.inspect(h)
+    # data_size = byte_size(data)
+    # ss = if data_size > 25, do: 25, else: data_size
+    # <<h::binary-size(ss), _rest::binary>> = data
+    # IO.inspect(h, base: :binary)
+    # IO.inspect(h)
     # IO.puts(h)
     defaultResult = %{
       :field_pic_flag => 0, # ?
@@ -35,9 +35,9 @@ defmodule H264.Decoder.Slice do
     {result, rest, bitOffset} = {defaultResult, rest, bitOffset} |> parse_header(context)
       |> parse_data()
 
-    IO.inspect(result)
+    # IO.inspect(result)
     Logger.info("slice single rest data: #{byte_size(rest)}, offset: #{bitOffset}")
-    IO.inspect(rest, base: :binary)
+    # IO.inspect(rest, base: :binary)
     {result, rest, bitOffset}
   end
 
@@ -171,6 +171,7 @@ defmodule H264.Decoder.Slice do
     # IO.inspect(result)
     Logger.info("slice header rest data: #{byte_size(rest)}, offset: #{bitOffset}")
     # IO.inspect(rest, base: :binary)
+    result = result |> Map.delete(:cur_sps) |> Map.delete(:cur_pps)
     {result, rest, bitOffset}
   end
 
