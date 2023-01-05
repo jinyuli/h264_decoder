@@ -75,13 +75,13 @@ defmodule H264.Decoder.Sps do
 
   def parse(data, bitOffset) do
     rest = data
-    ss = byte_size(data)
-    if ss > 25 do
-      ^ss = 25
-    end
-    <<h::binary-size(ss), _rest::binary>> = data
-    IO.inspect(h, base: :binary)
-    IO.inspect(h)
+    # ss = byte_size(data)
+    # if ss > 25 do
+    #   ^ss = 25
+    # end
+    # <<h::binary-size(ss), _rest::binary>> = data
+    # IO.inspect(h, base: :binary)
+    # IO.inspect(h)
     defaultResult = %{
       :chroma_format_idc => 1,
       :separate_colour_plane_flag => 0,
@@ -212,8 +212,8 @@ defmodule H264.Decoder.Sps do
   end
 
   defp read_vui_paramets({result, rest, bitOffset}) do
-    Logger.info("read vui parameters, #{byte_size(rest)}, #{bitOffset}")
-    IO.inspect(rest, base: :binary)
+    # Logger.info("read vui parameters, #{byte_size(rest)}, #{bitOffset}")
+    # IO.inspect(rest, base: :binary)
     if is_result_value_equal?(result, :vui_parameters_present_flag, 1) do
       {result, rest, bitOffset} |> BitReader.bit_read_u(:aspect_ratio_info_present_flag, 1)
                                 |> BitReader.bit_cond_read(is_result_value_equal?(:aspect_ratio_info_present_flag, 1), fn args ->
@@ -249,10 +249,47 @@ defmodule H264.Decoder.Sps do
                                         |> BitReader.bit_read_u(:time_scale, 32)
                                         |> BitReader.bit_read_u(:fixed_frame_rate_flag, 1)
                                 end)
+                                |> BitReader.bit_read_u(:nal_hrd_parameters_present_flag, 1)
+                                |> BitReader.bit_cond_read(is_result_value_equal?(:nal_hrd_parameters_present_flag, 1), &read_hrd/1)
+                                |> BitReader.bit_read_u(:vcl_hrd_parameters_present_flag, 1)
+                                |> BitReader.bit_cond_read(is_result_value_equal?(:vcl_hrd_parameters_present_flag, 1), &read_hrd/1)
+                                |> BitReader.bit_cond_read(fn r -> r[:nal_hrd_parameters_present_flag] == 1 or r[:vcl_hrd_parameters_present_flag] == 1 end, fn args ->
+                                  args |> BitReader.bit_read_u(:low_delay_hrd_flag, 1)
+                                end)
+                                |> BitReader.bit_read_u(:pic_struct_present_flag, 1)
+                                |> BitReader.bit_read_u(:bitstream_restriction_flag, 1)
+                                |> BitReader.bit_cond_read(is_result_value_equal?(:bitstream_restriction_flag, 1), fn args ->
+                                  args |> BitReader.bit_read_u(:motion_vectors_over_pic_boundaries_flag, 1)
+                                        |> BitReader.bit_read_ue_v(:max_bytes_per_pic_denom)
+                                        |> BitReader.bit_read_ue_v(:max_bytes_per_mb_denom)
+                                        |> BitReader.bit_read_ue_v(:log2_max_mv_length_horizontal)
+                                        |> BitReader.bit_read_ue_v(:log2_max_mv_length_vertical)
+                                        |> BitReader.bit_read_ue_v(:max_num_reorder_frames)
+                                        |> BitReader.bit_read_ue_v(:max_dec_frame_buffering)
+                                end)
 
     else
       {result, rest, bitOffset}
     end
+  end
+
+  defp read_hrd(args) do
+    args |> BitReader.bit_read_ue_v(:cpb_cnt_minus1)
+          |> BitReader.bit_read_u(:bit_rate_scale, 4)
+          |> BitReader.bit_read_u(:cpb_size_scale, 4)
+          |> BitReader.bit_func_read(fn args ->
+            {result, _, _} = args
+            cpb_cnt_minus1 = result[:cpb_cnt_minus1]
+            args |> BitReader.bit_repeat_multi_read([:bit_rate_value_minus1, :cpb_size_value_minus1, :cbr_flag], cpb_cnt_minus1 + 1, [&BitReader.read_ue_v/2, &BitReader.read_ue_v/2, &read_u_1/2])
+          end)
+          |> BitReader.bit_read_u(:initial_cpb_removal_delay_length_minus1, 5)
+          |> BitReader.bit_read_u(:cpb_removal_delay_length_minus1, 5)
+          |> BitReader.bit_read_u(:dpb_output_delay_length_minus1, 5)
+          |> BitReader.bit_read_u(:time_offset_length, 5)
+  end
+
+  def read_u_1(data, bitOffset) do
+    BitReader.read_u(data, bitOffset, 1)
   end
 
   defp read_scaling({result, rest, bitOffset}) do
