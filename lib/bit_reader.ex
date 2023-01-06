@@ -394,20 +394,22 @@ defmodule H264.Decoder.BitReader do
 
   defp get_signed_golomb_value(data, bitOffset, len) do
     rest = data
-    value = get_golomb_value(rest, bitOffset, len-1) - 1
-    byteLen = (bitOffset + len-1) >>> 0x03
-    rest = if byteLen > 0 do
-      <<_h::binary-size(byteLen), rest1::binary>> = rest
-      rest1
-    else
-      rest
-    end
+    n = get_golomb_value(rest, bitOffset, len) - 1
+    value = (n + 1) >>> 1
+    # Logger.info("get_signed_golomb_len, offset: #{bitOffset}, len: #{len}, value: #{value}")
+    # byteLen = (bitOffset + len-1) >>> 0x03
+    # rest = if byteLen > 0 do
+    #   <<_h::binary-size(byteLen), rest1::binary>> = rest
+    #   rest1
+    # else
+    #   rest
+    # end
+    # <<out, _rest::binary>> = rest
     bitOffset = (bitOffset + len) >>> 0x03
-    <<out, _rest::binary>> = rest
-    if test_binary_bit_0?(out, bitOffset) do
-      value
-    else
+    if test_binary_bit_0?(n, bitOffset) do
       value * -1
+    else
+      value
     end
   end
 

@@ -261,7 +261,7 @@ defmodule H264.Decoder.Sps do
                                 |> BitReader.bit_cond_read(is_result_value_equal?(:bitstream_restriction_flag, 1), fn args ->
                                   args |> BitReader.bit_read_u(:motion_vectors_over_pic_boundaries_flag, 1)
                                         |> BitReader.bit_read_ue_v(:max_bytes_per_pic_denom)
-                                        |> BitReader.bit_read_ue_v(:max_bytes_per_mb_denom)
+                                        |> BitReader.bit_read_ue_v(:max_bits_per_mb_denom)
                                         |> BitReader.bit_read_ue_v(:log2_max_mv_length_horizontal)
                                         |> BitReader.bit_read_ue_v(:log2_max_mv_length_vertical)
                                         |> BitReader.bit_read_ue_v(:max_num_reorder_frames)

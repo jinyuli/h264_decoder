@@ -98,7 +98,7 @@ defmodule H264.Decoder.Nal do
         Logger.info("parse pps")
         pps = H264.Decoder.Pps.parse(rest, 0)
         context = context |> Map.update!(:pps, fn v -> Map.put(v, pps[:pic_parameter_set_id], pps) end)
-        {context, false}
+        {context, true}
       @nal_type_single ->
         Logger.info("parse single")
         {slice, _, _} = H264.Decoder.Slice.parse_single(rest, 0, context)
