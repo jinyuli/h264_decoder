@@ -293,7 +293,7 @@ defmodule H264.Decoder.Slice do
           |> BitReader.bit_func_read(fn args ->
             {values, rest, bitOffset} = read_num_ref_idx(args, 0, num_ref_idx_l0_active_minus1, chromaArrayType)
             {result, _r, _b} = args
-            keys = [:luma_weight_l0, :luma_offset_l0, :chroma_weight_l0, :chroma_weight_l0]
+            keys = [:luma_weight_l0, :luma_offset_l0, :chroma_weight_l0, :chroma_offset_l0]
             result = Enum.zip_reduce(keys, values, result, fn (x, y, acc) -> Map.put(acc, x, y) end)
             {result, rest, bitOffset}
           end)
@@ -301,7 +301,7 @@ defmodule H264.Decoder.Slice do
             args |> BitReader.bit_func_read(fn args ->
               {values, rest, bitOffset} = read_num_ref_idx(args, 0, num_ref_idx_l1_active_minus1, chromaArrayType)
               {result, _r, _b} = args
-              keys = [:luma_weight_l1, :luma_offset_l1, :chroma_weight_l1, :chroma_weight_l1]
+              keys = [:luma_weight_l1, :luma_offset_l1, :chroma_weight_l1, :chroma_offset_l1]
               result = Enum.zip_reduce(keys, values, result, fn (x, y, acc) -> Map.put(acc, x, y) end)
               {result, rest, bitOffset}
             end)
