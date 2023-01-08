@@ -132,6 +132,7 @@ defmodule H264.Decoder.Nal do
         context = context |> Map.update!(:nals, fn v -> v ++ [%{:nalu => nal, :sh => slice}] end)
         {context, false}
       _ ->
+        context = context |> Map.update!(:nals, fn v -> v ++ [%{:nalu => nal}] end)
         {context, false}
         #Logger.warn("ignored NAL unit type #{nal_unit_type}")
         #ignore
