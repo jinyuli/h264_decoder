@@ -32,6 +32,7 @@ defmodule H264.Decoder.Nal do
 
   def parse(binaries) do
     default_context = %{
+      :nals => [],
       :pps => %{},
       :sps => %{},
     }
@@ -93,36 +94,42 @@ defmodule H264.Decoder.Nal do
         Logger.info("parse sps")
         sps = H264.Decoder.Sps.parse(rest, 0)
         context = context |> Map.update!(:sps, fn v -> Map.put(v, sps[:seq_parameter_set_id], sps) end)
+                          |> Map.update!(:nals, fn v -> v ++ [%{:nalu => nal, :sps => sps}] end)
         {context, false}
       @nal_type_pps ->
         Logger.info("parse pps")
         pps = H264.Decoder.Pps.parse(rest, 0)
         context = context |> Map.update!(:pps, fn v -> Map.put(v, pps[:pic_parameter_set_id], pps) end)
-        {context, true}
+                          |> Map.update!(:nals, fn v -> v ++ [%{:nalu => nal, :pps => pps}] end)
+        {context, false}
       @nal_type_single ->
         Logger.info("parse single")
         {slice, _, _} = H264.Decoder.Slice.parse_single(rest, 0, context)
-        context = context |> Map.update(:slices, [slice], fn v -> v ++ [slice] end)
+        context = context |> Map.update!(:nals, fn v -> v ++ [%{:nalu => nal, :sh => slice}] end)
         {context, false}
       @nal_type_partition_a ->
         Logger.info("parse partition a")
         {slice, _, _} = H264.Decoder.Slice.parse_single(rest, 0, context)
-        context = context |> Map.update(:slices, [slice], fn v -> v ++ [slice] end)
+        # context = context |> Map.update(:slices, [slice], fn v -> v ++ [slice] end)
+        context = context |> Map.update!(:nals, fn v -> v ++ [%{:nalu => nal, :sh => slice}] end)
         {context, false}
       @nal_type_partition_b ->
         Logger.info("parse partition b")
         {slice, _, _} = H264.Decoder.Slice.parse_single(rest, 0, context)
-        context = context |> Map.update(:slices, [slice], fn v -> v ++ [slice] end)
+        # context = context |> Map.update(:slices, [slice], fn v -> v ++ [slice] end)
+        context = context |> Map.update!(:nals, fn v -> v ++ [%{:nalu => nal, :sh => slice}] end)
         {context, false}
       @nal_type_partition_c ->
         Logger.info("parse partition c")
         {slice, _, _} = H264.Decoder.Slice.parse_single(rest, 0, context)
-        context = context |> Map.update(:slices, [slice], fn v -> v ++ [slice] end)
+        # context = context |> Map.update(:slices, [slice], fn v -> v ++ [slice] end)
+        context = context |> Map.update!(:nals, fn v -> v ++ [%{:nalu => nal, :sh => slice}] end)
         {context, false}
       @nal_type_idr ->
         Logger.info("parse idr")
         {slice, _, _} = H264.Decoder.Slice.parse_single(rest, 0, context)
-        context = context |> Map.update(:slices, [slice], fn v -> v ++ [slice] end)
+        # context = context |> Map.update(:slices, [slice], fn v -> v ++ [slice] end)
+        context = context |> Map.update!(:nals, fn v -> v ++ [%{:nalu => nal, :sh => slice}] end)
         {context, false}
       _ ->
         {context, false}
