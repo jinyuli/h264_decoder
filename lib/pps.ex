@@ -62,7 +62,7 @@ defmodule H264.Decoder.Pps do
                                   |> BitReader.bit_read_se_v(:pic_init_qs_minus26)
                                   |> BitReader.bit_read_se_v(:chroma_qp_index_offset)
                                   |> BitReader.bit_read_u(:deblocking_filter_control_present_flag, 1)
-                                  |> BitReader.bit_read_u(:constrainted_intra_pred_flag, 1)
+                                  |> BitReader.bit_read_u(:constrained_intra_pred_flag, 1)
                                   |> BitReader.bit_read_u(:redundant_pic_cnt_present_flag, 1)
                                   |> BitReader.bit_func_read(fn {result, rest, bitOffset} ->
                                     if BitReader.has_more_rbsp_data?(rest, bitOffset) do

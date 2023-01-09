@@ -250,27 +250,35 @@ defmodule H264.Decoder.Slice do
     {result, rest, bitOffset} = BitReader.bit_cond_read({result, rest, bitOffset},
       fn _r -> (rem_slice_type != 2) and (rem_slice_type != 4) end,
       fn args ->
-        args |> read_ref_pic_list_modification_flag(:ref_pic_list_modification_flag_l0)
+        args |> read_ref_pic_list_modification_flag(:ref_pic_list_modification_flag_l0, :abs_diff_pic_num_minus1_l0, :long_term_pic_num_l0)
     end)
     |> BitReader.bit_cond_read(fn _r -> rem_slice_type == 1 end, fn args ->
-      args |> read_ref_pic_list_modification_flag(:ref_pic_list_modification_flag_l1)
+      args |> read_ref_pic_list_modification_flag(:ref_pic_list_modification_flag_l1, :abs_diff_pic_num_minus1_l1, :long_term_pic_num_l1)
     end)
     {result, rest, bitOffset}
   end
 
-  defp read_ref_pic_list_modification_flag(args, key) do
+  defp read_ref_pic_list_modification_flag(args, key, abs_diff_key, long_term_key) do
     args |> BitReader.bit_read_u(key, 1)
           |> BitReader.bit_cond_read(BitReader.is_result_value_equal?(key, 1), fn args ->
-            args |> BitReader.bit_read_do_while(fn result -> result[:modification_of_pic_nums_idc] != 3 end, fn args ->
+            {result, rest, bitOffset} = args
+            result = result |> Map.put(abs_diff_key, []) |> Map.put(long_term_key, [])
+            {result, rest, bitOffset} |> BitReader.bit_read_do_while(fn result -> result[:modification_of_pic_nums_idc] != 3 end, fn args ->
               args |> BitReader.bit_read_ue_v(:modification_of_pic_nums_idc)
                     |> BitReader.bit_func_read(fn args ->
-                      {result, _r, _b} = args
+                      {result, rest, bitOffset} = args
                       modification_of_pic_nums_idc = result[:modification_of_pic_nums_idc]
                       cond do
                         (modification_of_pic_nums_idc == 0) or (modification_of_pic_nums_idc == 1) ->
-                          args |> BitReader.bit_read_ue_v(:abs_diff_pic_num_minus1)
+                          {value, rest, bitOffset} = BitReader.read_ue_v(rest, bitOffset)
+                          result = result |> Map.update!(abs_diff_key, fn v -> v ++ [value] end)
+                          {result, rest, bitOffset}
+                          # args |> BitReader.bit_read_ue_v(:abs_diff_pic_num_minus1)
                         modification_of_pic_nums_idc == 2 ->
-                          args |> BitReader.bit_read_ue_v(:long_term_pic_num)
+                          {value, rest, bitOffset} = BitReader.read_ue_v(rest, bitOffset)
+                          result = result |> Map.update!(long_term_key, fn v -> v ++ [value] end)
+                          {result, rest, bitOffset}
+                          # args |> BitReader.bit_read_ue_v(:long_term_pic_num)
                         true ->
                           args
                       end
